@@ -40,22 +40,22 @@ begin
 
     case when current_migration < 2 then
 
-        create recursive view card_with_ancestors (card_id, ancestors, level) as
-            select card_id, '{}'::uuid[], 1
+        create recursive view card_with_ancestors (card_id, parent_id, name, description, ancestors, level) as
+            select card_id, parent_id, name, description, '{}'::uuid[], 1
             from card
             where parent_id is null
             union all
-            select sub.card_id, ancestors || sub.parent_id, level + 1
+            select sub.card_id, sub.parent_id, sub.name, sub.description, ancestors || sub.parent_id, level + 1
             from card sub
             join card_with_ancestors p on (p.card_id = sub.parent_id)
         ;
 
-        create recursive view layer_with_ancestors (layer_id, ancestors, level) as
-            select layer_id, '{}'::uuid[], 1
+        create recursive view layer_with_ancestors (layer_id, parent_id, name, description, ancestors, level) as
+            select layer_id, parent_id, name, description, '{}'::uuid[], 1
             from layer
             where parent_id is null
             union all
-            select sub.layer_id, ancestors || sub.parent_id, level + 1
+            select sub.layer_id, sub.parent_id, sub.name, sub.description, ancestors || sub.parent_id, level + 1
             from layer sub
             join layer_with_ancestors p on (p.layer_id = sub.parent_id)
         ;
