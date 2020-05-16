@@ -1,0 +1,26 @@
+{
+  "name": "cardio",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "dev": "parcel index.html",
+    "test": "spago test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/docteurklein/cardio.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/docteurklein/cardio/issues"
+  },
+  "homepage": "https://github.com/docteurklein/cardio#readme",
+  "devDependencies": {
+    "parcel": "^1.12.4"
+  }
+}
