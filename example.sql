@@ -19,4 +19,4 @@ select layer_id, name descendant from layer_with_ancestors where ancestors @> ar
 select layer_id, name ancestor from layer where layer_id in (select unnest(ancestors) from layer_with_ancestors where layer_id = :'layer_id');
 
 -- find all cards of a layer
-select card.name, layer.name from card join card_in_layer using (card_id) join layer using (layer_id) where layer_id = :'layer_id';
+select card_id, card.name, layer.name from card join card_in_layer using (card_id) join layer using (layer_id) where layer_id = :'layer_id';
