@@ -64,6 +64,22 @@ begin
     else null;
     end case;
 
+
+    case when current_migration < 3 then
+
+        create role web_anon nologin;
+
+        grant usage on schema cardio to web_anon;
+        grant select on cardio.card to web_anon;
+        grant select on cardio.layer to web_anon;
+        grant select on cardio.card_in_layer to web_anon;
+        grant select on cardio.card_with_ancestors to web_anon;
+        grant select on cardio.layer_with_ancestors to web_anon;
+
+        insert into migration (id) values (3);
+    else null;
+    end case;
+
     select coalesce((select id from migration order by id desc limit 1), 0) into current_migration;
     return current_migration;
 end;
