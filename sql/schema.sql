@@ -80,6 +80,15 @@ begin
     else null;
     end case;
 
+    case when current_migration < 4 then
+
+        alter table card rename column name to title;
+        alter table layer rename column name to title;
+
+        insert into migration (id) values (4);
+    else null;
+    end case;
+
     select coalesce((select id from migration order by id desc limit 1), 0) into current_migration;
     return current_migration;
 end;

@@ -2,35 +2,71 @@ module Cardio.Card where
 
 import Prelude
 
+import Data.Either (hush, Either(..))
+import Data.Tuple.Nested ((/\))
 import Data.Maybe (Maybe(..))
-import Halogen as H
-import Halogen.HTML as HH
-import Halogen.HTML.Events as HE
+import Effect.Aff (attempt)
+import Effect.Aff.Class (class MonadAff)
+import Effect.Console (log, logShow)
+import Halogen (Component, ComponentHTML, mkComponent, mkEval, defaultEval, HalogenM, modify_, liftEffect, gets, liftAff)
+import Halogen.Hooks as Hooks
+import Halogen.HTML
+import Halogen.HTML.Events (onSubmit, onValueInput)
+import Halogen.HTML.Properties
+import Milkis (text, fetch, Fetch, URL(..), defaultFetchOptions) as M
+import Milkis.Impl.Window (windowFetch)
+import Network.RemoteData (RemoteData(..), _Success, fromMaybe, toMaybe)
+import Web.Event.Event (Event)
+import Web.Event.Event as Event
 
-type State = { count :: Int }
+component :: forall f i o m. MonadAff m => Component HTML f i o m
+component = Hooks.component \_ _ -> Hooks.do
+  state /\ stateId <- Hooks.useState $ { title: "", result: NotAsked }
 
-data Action = Increment
+  let
+    handleTitle = Hooks.put stateId \a -> (_ { title = a })
+    handleSubmit = Hooks.modify_ stateId show
 
-component :: forall q i o m. H.Component HH.HTML q i o m
-component =
-  H.mkComponent
-    { initialState: \_ -> { count: 0 }
-    , render
-    , eval: H.mkEval $ H.defaultEval { handleAction = handleAction }
-    }
+  Hooks.pure do
+      form
+        [ onSubmit (Just <<< handleSubmit) ]
+        [ h1_ [ text "Create card" ]
+        , label_
+            [ div_ [ text "Enter title:" ]
+            , input
+                [ value state.title
+                , onValueInput (Just <<< handleTitle)
+                ]
+            ]
+        , button
+            [ type_ ButtonSubmit ]
+            [ text "Create" ]
+        , div_
+            case state.result of
+              NotAsked -> []
+              Loading -> [text "loading…"]
+              Failure e -> [text "failed!", text e]
+              Success res ->
+                [ h2_
+                    [ text "Response:" ]
+                , pre_
+                    [ code_ [ text res ] ]
+                ]
+        ]
 
-render :: forall cs m. State -> H.ComponentHTML Action cs m
-render state =
-  HH.div_
-    [ HH.p_ 
-        [ HH.text $ "You clicked " <> show state.count <> " times" ]
-    , HH.button
-        [ HE.onClick \_ -> Just Increment ]
-        [ HH.text "Click me" ]
-    ]
+-- handleAction :: forall o m. MonadAff m => Action -> HalogenM State Action () o m Unit
+-- handleAction = case _ of
+--   SetTitle title -> do
+--     modify_ (_ { title = title })
+--   MakeRequest event -> do
+--     liftEffect $ Event.preventDefault event
+--     title <- gets _.title
+--     modify_ (_ { result = Loading })
+--     response <- liftAff $ attempt $ M.text =<< fetch (M.URL ("http://api.github.com/users/" <> title)) M.defaultFetchOptions
+--     case response of
+--         Left e -> modify_ (_ { result = Failure $ show e  })
+--         Right body -> do
+--             modify_ (_ { result = Success $ body  })
 
-handleAction :: forall cs o m. Action → H.HalogenM State Action cs o m Unit
-handleAction = case _ of
-  Increment ->
-    H.modify_ \st -> st { count = st.count + 1 }
-
+fetch :: M.Fetch
+fetch = M.fetch windowFetch
