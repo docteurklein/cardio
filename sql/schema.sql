@@ -2,28 +2,33 @@ begin;
 
 create schema if not exists cardio;
 
-set search_path = cardio, extensions;
+set search_path = cardio;
+
+create or replace function uuid4() returns uuid
+language sql parallel safe strict as $$
+select extensions.uuid_generate_v4();
+$$;
 
 create table if not exists migration (id bigint primary key, at timestamptz not null default clock_timestamp());
 
-drop function if exists migrate;
-create function migrate() returns bigint language plpgsql as $_$
-declare current_migration bigint;
+create or replace function migrate() returns bigint
+language plpgsql as $_$
+declare current bigint;
 begin
-    select coalesce((select id from migration order by id desc limit 1), 0) into current_migration;
-    raise notice 'current_migration "%"', current_migration;
+    select coalesce((select id from migration order by id desc limit 1), 0) into current;
+    raise notice 'current "%"', current;
 
-    case when current_migration < 1 then
+    case when current < 1 then
 
         create table card (
-            card_id uuid primary key default extensions.uuid_generate_v4(),
+            card_id uuid primary key default uuid4(),
             parent_id uuid references card (card_id),
             name text not null,
             description text not null
         );
 
         create table layer (
-            layer_id uuid primary key default extensions.uuid_generate_v4(),
+            layer_id uuid primary key default uuid4(),
             parent_id uuid references layer (layer_id),
             name text not null,
             description text not null
@@ -38,7 +43,7 @@ begin
     else null;
     end case;
 
-    case when current_migration < 2 then
+    case when current < 2 then
 
         create recursive view card_with_ancestors (card_id, parent_id, name, description, ancestors, level) as
             select card_id, parent_id, name, description, '{}'::uuid[], 1
@@ -64,8 +69,7 @@ begin
     else null;
     end case;
 
-
-    case when current_migration < 3 then
+    case when current < 3 then
 
         create role web_anon nologin;
 
@@ -80,7 +84,7 @@ begin
     else null;
     end case;
 
-    case when current_migration < 4 then
+    case when current < 4 then
 
         alter table card rename column name to title;
         alter table layer rename column name to title;
@@ -89,11 +93,74 @@ begin
     else null;
     end case;
 
-    select coalesce((select id from migration order by id desc limit 1), 0) into current_migration;
-    return current_migration;
+    case when current < 5 then
+
+        alter table card add column created_at timestamptz not null default clock_timestamp();
+        alter table card add column updated_at timestamptz not null default clock_timestamp();
+
+        alter table layer add column created_at timestamptz not null default clock_timestamp();
+        alter table layer add column updated_at timestamptz not null default clock_timestamp();
+
+        insert into migration (id) values (5);
+    else null;
+    end case;
+
+    case when current < 6 then
+
+        create table message (
+            message_id uuid primary key default uuid4(),
+            type text not null,
+            topics text[] not null,
+            at timestamptz not null default clock_timestamp(),
+            aggregate_id uuid not null,
+            payload jsonb not null
+        );
+        create index on message (aggregate_id);
+
+        create rule immutable_message as on update to message do instead nothing;
+        create rule immortal_message as on delete to message do instead nothing;
+
+        create or replace function project(message message) returns void
+        language plpgsql as $$
+        begin
+
+            perform pg_notify(topic::text, json_build_object(
+                'statement', 'select * from cardio.message where message_id = $1',
+                'params', array[message.message_id]
+            )::text) from unnest(message.topics || array['message_added', message.type]) as topic;
+
+            case message.type
+
+                when 'card_created' then
+                    insert into card
+                    (card_id              ,  title                     ,  description                     ,  created_at,  updated_at) values
+                    (message.aggregate_id ,  message.payload->>'title' ,  message.payload->>'description' ,  message.at,  message.at);
+                else
+                    raise notice 'no projection for message "%"', message.type;
+            end case;
+        end;
+        $$;
+
+        create or replace function trigger_projection() returns trigger
+        language plpgsql as $$
+        begin
+            perform project(new);
+            return null;
+        end;
+        $$;
+
+        create trigger on_message_insert after insert on message
+        for each row execute function trigger_projection();
+
+        insert into migration (id) values (6);
+    else null;
+    end case;
+
+    select coalesce((select id from migration order by id desc limit 1), 0) into current;
+    return current;
 end;
 $_$;
 
-select migrate() as current_migration;
+select migrate() as current;
 
 commit;
