@@ -76,8 +76,8 @@ with root_layer as (
         'layer_id', layer_id
     )
     from
-        (table root_card union all table sub1_card union all table sub2_card) any_card,
-        (table root_layer union all table sub1_layer union all table sub2_layer) any_layer
+        (table root_card union all table sub1_card union all table sub2_card limit 10) any_card,
+        (table root_layer union all table sub1_layer union all table sub2_layer limit 10) any_layer
     returning *
 )
 select count(*) from board;

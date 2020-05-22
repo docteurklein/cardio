@@ -71,6 +71,7 @@ begin
         create role web_anon nologin;
 
         grant usage on schema cardio to web_anon;
+        grant usage on schema extensions to web_anon;
         grant select on cardio.card to web_anon;
         grant select on cardio.layer to web_anon;
         grant select on cardio.card_in_layer to web_anon;
@@ -182,7 +183,7 @@ create or replace function project_v2(message message) returns void
 language plpgsql as $$
 begin
     perform pg_notify(topic, json_build_object(
-        'statement', 'select * from cardio.message where message_id = $1',
+        'sql', 'select row_to_json(message) from cardio.message where message_id = $1::uuid',
         'params', array[message.message_id]
     )::text) from unnest(message.topics || array['message_added', message.type, '*']) as topic;
 
