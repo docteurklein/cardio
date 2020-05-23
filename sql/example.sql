@@ -1,5 +1,8 @@
 set search_path = cardio;
 
+select card_id from card order by random() limit 1 \gset
+select layer_id from layer order by random() limit 1 \gset
+
 -- which card
 select card_id, title from card where card_id = :'card_id';
 

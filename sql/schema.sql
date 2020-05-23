@@ -1,3 +1,5 @@
+\set ON_ERROR_STOP 1
+
 begin;
 
 create schema if not exists cardio;
@@ -188,17 +190,17 @@ begin
     perform pg_notify(topic, json_build_object(
         'sql', 'select row_to_json(message) from cardio.message where message_id = $1::uuid',
         'params', array[message.message_id]
-    )::text) from unnest(message.topics || array['message_added', message.type, '*']) as topic;
+    )::text) from unnest(message.topics || array['*', 'message', message.type]) as topic;
 
     case message.type
         when 'card_created' then
             insert into card
-            (card_id              ,  title                     ,  description                     ,  created_at,  updated_at) values
-            (message.aggregate_id ,  message.payload->>'title' ,  message.payload->>'description' ,  message.at,  message.at);
+            (card_id              , parent_id                             , title                     , description                     , created_at , updated_at) values
+            (message.aggregate_id , (message.payload->>'parent_id')::uuid , message.payload->>'title' , message.payload->>'description' , message.at , message.at);
         when 'layer_created' then
             insert into layer
-            (layer_id             ,  title                     ,  description                     ,  created_at,  updated_at) values
-            (message.aggregate_id ,  message.payload->>'title' ,  message.payload->>'description' ,  message.at,  message.at);
+            (layer_id             , parent_id                             , title                     , description                     , created_at , updated_at) values
+            (message.aggregate_id , (message.payload->>'parent_id')::uuid , message.payload->>'title' , message.payload->>'description' , message.at , message.at);
         when 'card_added_to_layer' then
             insert into card_in_layer
             (card_id              ,  layer_id                             , added_at) values

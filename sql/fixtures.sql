@@ -1,3 +1,5 @@
+\set ON_ERROR_STOP 1
+
 begin;
 
 set search_path = cardio;
