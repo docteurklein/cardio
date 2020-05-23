@@ -72,11 +72,11 @@ begin
 
         grant usage on schema cardio to web_anon;
         grant usage on schema extensions to web_anon;
-        grant select on cardio.card to web_anon;
-        grant select on cardio.layer to web_anon;
-        grant select on cardio.card_in_layer to web_anon;
-        grant select on cardio.card_with_ancestors to web_anon;
-        grant select on cardio.layer_with_ancestors to web_anon;
+        grant select on card to web_anon;
+        grant select on layer to web_anon;
+        grant select on card_in_layer to web_anon;
+        grant select on card_with_ancestors to web_anon;
+        grant select on layer_with_ancestors to web_anon;
 
         insert into migration (id, reason) values (3, 'add roles for postgrest');
     else null;
@@ -108,6 +108,9 @@ begin
             join layer_with_ancestors p on (p.layer_id = sub.parent_id)
         ;
 
+        grant select on card_with_ancestors to web_anon;
+        grant select on layer_with_ancestors to web_anon;
+
         insert into migration (id, reason) values (4, 'rename title column');
     else null;
     end case;
@@ -137,8 +140,8 @@ begin
         create rule immutable_message as on update to message do instead nothing;
         create rule immortal_message as on delete to message do instead nothing;
 
-        grant insert on cardio.message to web_anon;
-        grant select on cardio.message to web_anon;
+        grant insert on message to web_anon;
+        grant select on message to web_anon;
 
         create or replace function trigger_projection() returns trigger
         language plpgsql as $$

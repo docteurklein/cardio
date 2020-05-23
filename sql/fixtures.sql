@@ -26,18 +26,19 @@ with root_layer as (
     from generate_series(1, 5) i, root_layer as parent
     returning aggregate_id as layer_id, payload->>'title' as title
 )
-, sub2_layer as (
-    insert into message
-    (type, topics, aggregate_id, payload) select
-    'layer_created', array['layer', 'board'], uuid4(), json_build_object(
-        'title', concat_ws(' > ', 'sub2 layer ' || i, parent.title),
-        'description', random()::text,
-        'parent_id', parent.layer_id
-    )
-    from generate_series(1, 6) i, sub1_layer as parent
-    returning aggregate_id as layer_id, payload->>'title' as title
+insert into message
+(type, topics, aggregate_id, payload) select
+'layer_created', array['layer', 'board'], uuid4(), json_build_object(
+    'title', concat_ws(' > ', 'sub2 layer ' || i, parent.title),
+    'description', random()::text,
+    'parent_id', parent.layer_id
 )
-, root_card as (
+from generate_series(1, 6) i, sub1_layer as parent;
+
+commit;
+begin;
+
+with root_card as (
     insert into message
     (type, topics, aggregate_id, payload) select
     'card_created', array['card', 'board'], uuid4(), json_build_object(
@@ -58,28 +59,23 @@ with root_layer as (
     from generate_series(1, 5) i, root_card as parent
     returning aggregate_id as card_id, payload->>'title' as title
 )
-, sub2_card as (
-    insert into message
-    (type, topics, aggregate_id, payload) select
-    'card_created', array['card', 'board'], uuid4(), json_build_object(
-        'title', concat_ws(' > ', 'sub2 card ' || i, parent.title),
-        'description', random()::text,
-        'parent_id', parent.card_id
-    )
-    from generate_series(1, 6) i, sub1_card as parent
-    returning aggregate_id as card_id, payload->>'title' as title
+insert into message
+(type, topics, aggregate_id, payload) select
+'card_created', array['card', 'board'], uuid4(), json_build_object(
+    'title', concat_ws(' > ', 'sub2 card ' || i, parent.title),
+    'description', random()::text,
+    'parent_id', parent.card_id
 )
-, board as (
-    insert into message
-    (type, topics, aggregate_id, payload) select
-    'card_added_to_layer', array['card', 'layer', 'board'], card_id, json_build_object(
-        'layer_id', layer_id
-    )
-    from
-        (table root_card union all table sub1_card union all table sub2_card limit 10) any_card,
-        (table root_layer union all table sub1_layer union all table sub2_layer limit 10) any_layer
-    returning *
+from generate_series(1, 6) i, sub1_card as parent;
+
+commit;
+begin;
+
+insert into message
+(type, topics, aggregate_id, payload) select
+'card_added_to_layer', array['card', 'layer', 'board'], card_id, json_build_object(
+    'layer_id', layer_id
 )
-select count(*) from board;
+from card, layer limit 1000;
 
 commit;
