@@ -23,21 +23,21 @@ begin
     case when current < 1 then
         create table card (
             card_id uuid primary key default uuid4(),
-            parent_id uuid references card (card_id),
+            parent_id uuid references card (card_id) deferrable initially immediate,
             name text not null,
             description text not null
         );
 
         create table layer (
             layer_id uuid primary key default uuid4(),
-            parent_id uuid references layer (layer_id),
+            parent_id uuid references layer (layer_id) deferrable initially immediate,
             name text not null,
             description text not null
         );
 
         create table card_in_layer (
-            card_id uuid references card (card_id),
-            layer_id uuid references layer (layer_id)
+            card_id uuid references card (card_id) deferrable initially immediate,
+            layer_id uuid references layer (layer_id) deferrable initially immediate
         );
 
         insert into migration (id, reason) values (1, 'initial schema for card and layer');
@@ -74,11 +74,15 @@ begin
 
         grant usage on schema cardio to web_anon;
         grant usage on schema extensions to web_anon;
+
         grant select on card to web_anon;
+        grant insert on card to web_anon;
         grant select on layer to web_anon;
         grant select on card_in_layer to web_anon;
         grant select on card_with_ancestors to web_anon;
         grant select on layer_with_ancestors to web_anon;
+
+        grant execute on function uuid4 to web_anon;
 
         insert into migration (id, reason) values (3, 'add roles for postgrest');
     else null;
@@ -210,5 +214,6 @@ begin
     end case;
 end;
 $$;
+grant execute on function project_v2 to web_anon;
 
 commit;

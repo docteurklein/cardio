@@ -47,7 +47,7 @@ with root_card as (
         'title', 'root card ' || i,
         'description', random()::text
     )
-    from generate_series(1, 3) i
+    from generate_series(1, 30) i
     returning aggregate_id as card_id, payload->>'title' as title
 )
 , sub1_card as (
@@ -58,7 +58,7 @@ with root_card as (
         'description', random()::text,
         'parent_id', parent.card_id
     )
-    from generate_series(1, 5) i, root_card as parent
+    from generate_series(1, 20) i, root_card as parent
     returning aggregate_id as card_id, payload->>'title' as title
 )
 insert into message
@@ -68,7 +68,7 @@ insert into message
     'description', random()::text,
     'parent_id', parent.card_id
 )
-from generate_series(1, 6) i, sub1_card as parent;
+from generate_series(1, 10) i, sub1_card as parent;
 
 commit;
 begin;
@@ -78,6 +78,6 @@ insert into message
 'card_added_to_layer', array['card', 'layer', 'board'], card_id, json_build_object(
     'layer_id', layer_id
 )
-from card, layer limit 1000;
+from card, layer limit 100;
 
 commit;
