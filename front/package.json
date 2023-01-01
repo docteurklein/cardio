@@ -21,6 +21,6 @@
   },
   "homepage": "https://github.com/docteurklein/cardio#readme",
   "devDependencies": {
-    "parcel": "^1.12.4"
+    "parcel": "^2.8.2"
   }
 }
